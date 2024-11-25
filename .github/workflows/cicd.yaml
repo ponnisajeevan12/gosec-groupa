@@ -17,8 +17,6 @@ jobs:
 
       - name: Set up SonarCloud
         uses: sonarsource/sonarcloud-github-action@v2
-        with:
-          # No need for sonar-token input, the action automatically uses the SONAR_TOKEN secret
 
       - name: Run SonarQube Scan
         env:
