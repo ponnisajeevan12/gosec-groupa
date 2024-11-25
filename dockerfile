@@ -1,5 +1,5 @@
-# Use an official Go runtime as the base image
-FROM golang:1.20-alpine
+# Use an official Go runtime as the base image with the latest version of Alpine
+FROM golang:1.20-alpine3.20
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
