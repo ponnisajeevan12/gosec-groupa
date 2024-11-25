@@ -32,15 +32,15 @@ jobs:
 
     # Trivy scan
     - name: Run Trivy scan for container vulnerabilities
-      uses: aquasecurity/trivy-action@v0.5.0
+      uses: aquasecurity/trivy-action@v0.11.1
       with:
-        image: go-docker-sample:latest
+        image: go-server:latest
       continue-on-error: true  # So that the pipeline doesn't fail on vulnerability warnings
 
     # Build Docker image
     - name: Build Docker image
       run: |
-        docker build -t go-docker-sample .
+        docker build -t go-server:latest .
 
     # Log in to Azure Container Registry
     - name: Log in to Azure Container Registry
@@ -52,8 +52,8 @@ jobs:
     # Push Docker image to ACR
     - name: Push Docker image to Azure Container Registry
       run: |
-        docker tag go-docker-sample ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-docker-sample:latest
-        docker push ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-docker-sample:latest
+        docker tag go-server ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-server:latest
+        docker push ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-server:latest
 
     # Deploy to Azure Web Apps
     - name: Deploy to Azure Web Apps
@@ -61,7 +61,7 @@ jobs:
       with:
         app-name: ${{ secrets.AZURE_APP_NAME }}
         publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
-        images: ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-docker-sample:latest
+        images: ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-server:latest
 
     # Send email notification
     - name: Send email notification with the scan report
