@@ -4,79 +4,67 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  AZURE_WEBAPP_NAME: "goapp-groupa" # Replace with your Web App name
+  AZURE_RESOURCE_GROUP: "GroupA-Week12" # Replace with your Azure resource group
+  AZURE_AZURE_REGISTRY_NAME: "groupa" # Replace with your Azure Container Registry name
+  DOCKER_IMAGE_NAME: "go-server:latest"
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout the repository
-    - name: Checkout Repository
-      uses: actions/checkout@v2
+    # Checkout Code
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-    # Set up Docker
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    # Set up Go environment
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.20'
-
-    # SonarQube scan
-    - name: Run SonarQube Scan
-      uses: SonarSource/sonarcloud-github-action@v2
-      with:
-        sonar-token: ${{ secrets.SONARQUBE_TOKEN }}
-
-    # Trivy scan
-  #  - name: Run Trivy scan for container vulnerabilities
-  #    uses: aquasecurity/trivy-action@v0.1.0
-  #    with:
-   #     image: go-server:latest
-    #  continue-on-error: true  # So that the pipeline doesn't fail on vulnerability warnings
-
-    # Build Docker image
-    - name: Build Docker image
+    # SonarQube Code Quality Analysis
+    - name: Run SonarQube analysis
+      env:
+        SONAR_HOST_URL: "https://sonarcloud.io"
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        docker build -t go-server:latest .
+        curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+        unzip sonar-scanner.zip -d $HOME/
+        export PATH="$HOME/sonar-scanner-4.8.0.2856-linux/bin:$PATH"
+        sonar-scanner \
+          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+          -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=$SONAR_HOST_URL
 
-    # Log in to Azure Container Registry
-    - name: Log in to Azure Container Registry
-      uses: azure/docker-login@v1
-      with:
-        username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
-        password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
-
-    # Push Docker image to ACR
-    - name: Push Docker image to Azure Container Registry
+    # Build and Dockerize Application
+    - name: Build and Dockerize Application
       run: |
-        docker tag go-server ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-server:latest
-        docker push ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-server:latest
+        docker build -t ${{ secrets.AZURE_AZURE_REGISTRY_NAME }}.azurecr.io/${{ env.DOCKER_IMAGE_NAME }}:latest .
+
+    # Scan Docker Image with Trivy
+    - name: Scan Docker Image with Trivy
+      uses: aquasecurity/trivy-action@v0.12.1
+      with:
+        image-ref: ${{ secrets.AZURE_AZURE_REGISTRY_NAME }}.azurecr.io/${{ env.DOCKER_IMAGE_NAME }}:latest
+
+    # Log in to Azure Container Registry (ACR)
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Push Docker Image to ACR
+    - name: Push Docker Image to ACR
+      run: |
+        docker login ${{ secrets.AZURE_AZURE_REGISTRY_NAME }}.azurecr.io -u ${{ secrets.AZURE_REGISTRY_USERNAME }} -p ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+        docker push ${{ secrets.AZURE_AZURE_REGISTRY_NAME }}.azurecr.io/${{ env.DOCKER_IMAGE_NAME }}:latest
 
     # Deploy to Azure Web Apps
     - name: Deploy to Azure Web Apps
       uses: azure/webapps-deploy@v2
       with:
-        app-name: ${{ secrets.AZURE_APP_NAME }}
-        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
-        images: ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-server:latest
-
-    # Send email notification
-    - name: Send email notification with the scan report
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        to: 'recipient@example.com'
-        subject: 'CI/CD Pipeline Status'
-        body: |
-          SonarQube scan and Trivy scan have been completed.
-          Please find the results attached.
-
-        attachments: |
-          ./sonarqube-report.txt  # Attach SonarQube report if available
-          ./trivy-report.txt      # Attach Trivy report if available
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        slot-name: "production"
+        images: ${{ secrets.AZURE_AZURE_REGISTRY_NAME }}.azurecr.io/${{ env.DOCKER_IMAGE_NAME }}:latest
