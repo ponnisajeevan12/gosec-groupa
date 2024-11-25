@@ -1,0 +1,82 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    # Set up Docker
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    # Set up Go environment
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.20'
+
+    # SonarQube scan
+    - name: Run SonarQube Scan
+      uses: SonarSource/sonarcloud-github-action@v2
+      with:
+        sonar-token: ${{ secrets.SONARQUBE_TOKEN }}
+
+    # Trivy scan
+    - name: Run Trivy scan for container vulnerabilities
+      uses: aquasecurity/trivy-action@v0.5.0
+      with:
+        image: go-docker-sample:latest
+      continue-on-error: true  # So that the pipeline doesn't fail on vulnerability warnings
+
+    # Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t go-docker-sample .
+
+    # Log in to Azure Container Registry
+    - name: Log in to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+        password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+    # Push Docker image to ACR
+    - name: Push Docker image to Azure Container Registry
+      run: |
+        docker tag go-docker-sample ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-docker-sample:latest
+        docker push ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-docker-sample:latest
+
+    # Deploy to Azure Web Apps
+    - name: Deploy to Azure Web Apps
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ secrets.AZURE_APP_NAME }}
+        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+        images: ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/go-docker-sample:latest
+
+    # Send email notification
+    - name: Send email notification with the scan report
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        to: 'recipient@example.com'
+        subject: 'CI/CD Pipeline Status'
+        body: |
+          SonarQube scan and Trivy scan have been completed.
+          Please find the results attached.
+
+        attachments: |
+          ./sonarqube-report.txt  # Attach SonarQube report if available
+          ./trivy-report.txt      # Attach Trivy report if available
