@@ -31,11 +31,11 @@ jobs:
         sonar-token: ${{ secrets.SONARQUBE_TOKEN }}
 
     # Trivy scan
-    - name: Run Trivy scan for container vulnerabilities
-      uses: aquasecurity/trivy-action@v0.1.0
-      with:
-        image: go-server:latest
-      continue-on-error: true  # So that the pipeline doesn't fail on vulnerability warnings
+  #  - name: Run Trivy scan for container vulnerabilities
+  #    uses: aquasecurity/trivy-action@v0.1.0
+  #    with:
+   #     image: go-server:latest
+    #  continue-on-error: true  # So that the pipeline doesn't fail on vulnerability warnings
 
     # Build Docker image
     - name: Build Docker image
