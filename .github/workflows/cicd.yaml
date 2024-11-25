@@ -36,8 +36,27 @@ jobs:
         run: |
           trivy image --format json --output trivy-report.json my-app
 
-      - name: Upload Trivy Report
-        uses: actions/upload-artifact@v3
+      - name: Format Trivy Report to Readable Format
+        run: |
+          cat trivy-report.json | jq '.' > trivy-report-readable.txt
+          cat trivy-report-readable.txt
+
+      - name: Send Email with Trivy Report
+        uses: dawidd6/action-send-mail@v3
         with:
-          name: trivy-report
-          path: trivy-report.json
+          smtp-server: smtp.gmail.com
+          smtp-port: 587
+          smtp-username: ${{ secrets.EMAIL_USERNAME }}
+          smtp-password: ${{ secrets.EMAIL_PASSWORD }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          to: ${{ secrets.EMAIL_USERNAME }}
+          subject: "Trivy Image Scan Report"
+          body: |
+            Hello,
+
+            Please find the readable report of the recent Trivy scan:
+
+            $(cat trivy-report-readable.txt)
+
+          attachments: |
+            trivy-report.json
