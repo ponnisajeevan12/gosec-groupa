@@ -17,10 +17,16 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh -o install.sh
+          chmod +x install.sh
+          ./install.sh
+          sudo mv trivy /usr/local/bin/
 
       - name: Verify Trivy Installation
-        run: trivy --version
+        run: |
+          echo $PATH
+          which trivy
+          trivy --version
 
       - name: Build Docker Image
         run: |
