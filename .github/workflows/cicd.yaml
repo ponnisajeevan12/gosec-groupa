@@ -44,13 +44,13 @@ jobs:
       - name: Send Email with Trivy Report
         uses: dawidd6/action-send-mail@v3
         with:
-          smtp-server: smtp.gmail.com
-          smtp-port: 587
-          smtp-username: ${{ secrets.EMAIL_USERNAME }}
-          smtp-password: ${{ secrets.EMAIL_PASSWORD }}
-          from: ${{ secrets.EMAIL_USERNAME }}
-          to: ${{ secrets.EMAIL_USERNAME }}
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "Trivy Image Scan Report"
+          to: ${{ secrets.EMAIL_USERNAME }}
+          from: ${{ secrets.EMAIL_USERNAME }}
           body: |
             Hello,
 
