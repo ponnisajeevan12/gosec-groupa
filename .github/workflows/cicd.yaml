@@ -17,16 +17,20 @@ jobs:
 
       - name: Set up SonarQube scanner
         uses: sonarsource/sonarcloud-github-action@v2
-		    env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+		
 
       - name: Run SonarQube Scan
+        env:
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+		  SONAR_ORG: ${{ secrets.SONAR_ORG }}
+		  SONAR_HOST_URL: https://sonarcloud.io
+		  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonar-scanner \
-            -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-            -Dsonar.organization=$SONAR_ORG \
-            -Dsonar.host.url=$SONAR_HOST_URL 
-           
+         sonar-scanner \
+			-Dsonar.projectKey=$SONAR_PROJECT_KEY \
+			-Dsonar.organization=$SONAR_ORG \
+			-Dsonar.host.url=$SONAR_HOST_URL \
+			-Dsonar.login=$SONAR_TOKEN
 
   trivy_scan:
     runs-on: ubuntu-latest
