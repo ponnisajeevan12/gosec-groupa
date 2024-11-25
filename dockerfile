@@ -14,7 +14,7 @@ RUN go mod tidy
 RUN go build -o main .
 
 # Expose port 8080 to be accessible outside the container
-EXPOSE 8080
+EXPOSE 80
 
 # Command to run the executable
 CMD ["./main"]
