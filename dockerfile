@@ -1,5 +1,5 @@
-# Use an official Go runtime as the base image with the latest version of Alpine
-FROM golang:1.20-alpine3.20
+# Build stage
+FROM golang:1.23.0-alpine3.20 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -13,7 +13,16 @@ RUN go mod tidy
 # Build the Go app
 RUN go build -o main .
 
-# Expose port 8080 to be accessible outside the container
+# Final stage (use a smaller base image for the final container)
+FROM alpine:latest
+
+# Set the working directory in the final image
+WORKDIR /app
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/main .
+
+# Expose port 80 to be accessible outside the container
 EXPOSE 80
 
 # Command to run the executable
